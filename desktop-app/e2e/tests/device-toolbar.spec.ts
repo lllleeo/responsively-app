@@ -22,6 +22,13 @@ test.describe('Device Toolbar', () => {
       let zoomSteps = 0;
 
       try {
+        if (layout === 'INDIVIDUAL') {
+          const preview = await app.page
+            .locator('.flex.gap-4.overflow-auto.p-4.justify-center')
+            .boundingBox();
+          const switcher = await app.page.getByTestId('layout-FLEX').boundingBox();
+          expect(preview!.y + preview!.height).toBeLessThanOrEqual(switcher!.y);
+        }
         // Small previews force multiple toolbar rows, which previously covered
         // the page's top edge when the pointer approached it.
         while ((await zoomLevel.innerText()) !== '25%' && zoomSteps < 14) {

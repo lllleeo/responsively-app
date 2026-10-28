@@ -109,23 +109,16 @@ test.describe('Custom Device Creation', () => {
     // Close device manager to return to browser view
     await app.closeDeviceManager();
 
-    // The new device should appear as a webview — find it by checking all webviews
-    // The webview width attribute should match the device width
-    const webviews = app.page.locator('webview');
-    const count = await webviews.count();
-    expect(count).toBeGreaterThan(0);
-
-    // Look for the webview with our custom dimensions
-    let found = false;
-    for (let i = 0; i < count; i++) {
-      const wv = webviews.nth(i);
-      const style = await wv.getAttribute('style');
-      if (style?.includes('width: 500px') && style?.includes('height: 700px')) {
-        found = true;
-        break;
-      }
-    }
-    expect(found).toBe(true);
+    const webview = app.page.locator('webview[id="Dimension Test Device"]');
+    const screen = app.page.locator('[data-scaled-frame]').filter({has: webview});
+    const chrome = screen.locator('[data-browser-chrome]');
+    await expect(chrome).toHaveCSS('width', '500px');
+    await expect(chrome).toHaveCSS('height', '700px');
+    // The default custom phone uses legacy Safari: 72px top + 44px bottom.
+    // Device dimensions include those bars; the page receives the remainder.
+    await expect(chrome).toHaveAttribute('data-browser-profile', 'safari-legacy');
+    await expect(webview).toHaveCSS('width', '500px');
+    await expect(webview).toHaveCSS('height', '584px');
   });
 
   test('edit custom device changes its dimensions', async ({app}) => {
