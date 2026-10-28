@@ -1,6 +1,6 @@
 import {Device} from 'common/deviceList';
 import {ipcMain, shell, webContents} from 'electron';
-import {writeFile, ensureDir} from 'fs-extra';
+import {writeFile, mkdir} from 'node:fs/promises';
 import path from 'path';
 import {IPC_MAIN_CHANNELS} from '../../common/constants';
 import store from '../../store';
@@ -95,7 +95,7 @@ const quickScreenshot = async (arg: ScreenshotArgs): Promise<ScreenshotResult> =
   const fileName = name.replaceAll('/', '-').replaceAll(':', '-');
   const dir = store.get('userPreferences.screenshot.saveLocation');
   const filePath = path.join(dir, `/${fileName}-${Date.now()}.jpeg`);
-  await ensureDir(dir);
+  await mkdir(dir, {recursive: true});
   await writeFile(filePath, image.toJPEG(100));
   if (process.env.E2E_TEST === 'true') {
     // Record the call for E2E test verification without opening Finder

@@ -1,0 +1,356 @@
+.device-browser-chrome {
+  position: absolute;
+  transform-origin: top left;
+  pointer-events: none;
+  color: #202124;
+  font-family: system-ui, Avenir, Arial, sans-serif;
+  font-size: 14px;
+}
+.device-browser-chrome * {
+  box-sizing: border-box;
+}
+.device-browser-top,
+.device-browser-bottom {
+  position: absolute;
+  left: 0;
+  right: 0;
+  background: #f9f9f9;
+  pointer-events: auto;
+  overflow: hidden;
+  transition: height 180ms ease;
+}
+.device-browser-top {
+  top: 0;
+}
+.device-browser-bottom {
+  bottom: 0;
+}
+.device-browser-bottom:not([style*='height: 0px']) {
+  box-shadow: inset 0 1px #e4e4e4;
+}
+[data-browser-profile='safari-modern'] .device-browser-top,
+[data-browser-profile='safari-glass'] .device-browser-top,
+[data-browser-profile='chrome'] .device-browser-top {
+  background: #fff;
+}
+.device-browser-status {
+  display: flex;
+  align-items: center;
+  line-height: 1.1;
+  color: #000;
+}
+.device-browser-status-time,
+.device-browser-status-icons {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.device-browser-date {
+  margin-left: 8px;
+}
+.device-browser-status-icons {
+  margin-left: auto;
+  gap: 5px;
+}
+.device-browser-status-icons svg {
+  display: block;
+  width: auto;
+  flex-shrink: 0;
+}
+.device-browser-top-address {
+  display: flex;
+  align-items: flex-end;
+  padding: 0 10px 10px;
+  border-bottom: 1px solid #e4e4e4;
+  gap: 8px;
+  overflow: hidden;
+}
+.device-browser-address-row {
+  height: 63px;
+  padding: 10px 22px;
+}
+.device-browser-address {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  height: 43px;
+  padding: 0 8px;
+  border-radius: 9px;
+  background: #e8e8e9;
+  gap: 8px;
+  font-size: 15px;
+}
+.device-browser-top-address .device-browser-address {
+  height: 33px;
+}
+[data-browser-profile='safari-tablet'] .device-browser-top-address .device-browser-address {
+  max-width: 440px;
+}
+[data-browser-profile='chrome'] .device-browser-top-address {
+  padding: 8px 9px;
+  align-items: center;
+}
+[data-browser-profile='chrome'] .device-browser-address {
+  height: 37px;
+  border-radius: 100px;
+  background: #dadada52;
+}
+.device-browser-domain {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  gap: 5px;
+}
+.device-browser-domain span,
+.device-browser-compact span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.device-browser-domain svg {
+  flex-shrink: 0;
+}
+.device-browser-text-size {
+  font-size: 17px;
+}
+.device-browser-chrome button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+.device-browser-chrome button:focus-visible {
+  outline: 2px solid #007aff;
+  outline-offset: -2px;
+  border-radius: 5px;
+}
+.device-browser-chrome button:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+.device-browser-address button {
+  width: 28px;
+  height: 30px;
+}
+.device-browser-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 44px;
+  padding: 0 20px;
+  color: #007aff;
+}
+.device-browser-actions button {
+  width: 30px;
+  height: 40px;
+}
+[data-browser-profile='safari-legacy'] .device-browser-actions {
+  height: 48px;
+}
+.device-browser-inline-actions {
+  display: flex;
+  flex: 1;
+  justify-content: space-around;
+  color: #007aff;
+}
+.device-browser-inline-actions button {
+  width: 35px;
+  height: 33px;
+}
+[data-browser-profile='chrome'] .device-browser-inline-actions {
+  flex: 0;
+  color: inherit;
+}
+.device-browser-chrome .device-browser-compact {
+  width: 100%;
+  height: 36px;
+  gap: 4px;
+  padding: 0 24px;
+  font-size: 12px;
+}
+[data-compact='true'] .device-browser-top-address {
+  padding: 0;
+}
+.device-browser-top-address .device-browser-compact {
+  height: 100%;
+}
+.device-browser-home {
+  position: absolute;
+  bottom: 8px;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+.device-browser-home span {
+  width: 146px;
+  max-width: 40%;
+  height: 5px;
+  border-radius: 100px;
+  background: #000;
+}
+[data-browser-profile='safari-glass'] .device-browser-bottom {
+  background: linear-gradient(0deg, #0003, transparent);
+  box-shadow: none;
+  padding: 15px 30px 30px;
+}
+.device-browser-glass-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 45px;
+  max-width: 410px;
+  margin: auto;
+}
+.device-browser-glass-controls > button,
+.device-browser-glass-controls .device-browser-address {
+  height: 45px;
+  border-radius: 100px;
+  background: #f9f9f9e6;
+  box-shadow:
+    0 0 20px #0002,
+    inset 1px 1px 1px #fffc;
+  backdrop-filter: blur(4px);
+}
+.device-browser-glass-controls > button {
+  width: 45px;
+}
+[data-browser-profile='safari-glass'][data-compact='true'] .device-browser-bottom {
+  padding: 5px;
+}
+[data-compact='true'] .device-browser-glass-controls {
+  transform: scale(0.6);
+}
+.device-browser-glass-controls .device-browser-compact {
+  width: 80%;
+  margin: auto;
+  font-size: 15px;
+}
+.device-browser-viewport {
+  transition:
+    height 180ms ease,
+    margin-top 180ms ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  .device-browser-top,
+  .device-browser-bottom,
+  .device-browser-viewport {
+    transition: none;
+  }
+}
+
+/* iPhone Duo: an 84px side rail while folded; one 77px top row unfolded. */
+.device-duo-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #000;
+  font-family: ui-rounded, system-ui, sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 20px;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+.device-duo-status svg {
+  flex-shrink: 0;
+}
+.device-duo-rail {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 84px;
+  height: 100%;
+  padding: 80px 23.75px 33px 12.25px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 39px;
+  background: #fff;
+  pointer-events: auto;
+}
+[data-rail-side='left'] .device-duo-rail {
+  left: 0;
+  right: auto;
+  padding-left: 23.75px;
+  padding-right: 12.25px;
+}
+.device-duo-rail .device-duo-status {
+  width: 48px;
+  flex-direction: column;
+  gap: 6px;
+}
+.device-duo-rail-controls {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: space-between;
+}
+.device-duo-rail-controls > div {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.device-duo-rail button,
+.device-duo-top nav button,
+.device-duo-trailing > button {
+  width: 48px;
+  height: 48px;
+  border-radius: 100px;
+  color: #1a1a1a;
+  background: #f2f2f28c;
+  box-shadow:
+    0 0 0 0.5px #d2d2d2,
+    0 8px 15px #00000005;
+}
+.device-duo-bottom {
+  padding: 15px 30px 30px;
+  background: #fff;
+  box-shadow: none !important;
+}
+.device-duo-bottom .device-browser-address {
+  height: 45px;
+  font-size: 17px;
+  font-weight: 500;
+}
+[data-compact='true'] .device-duo-bottom {
+  padding: 5px;
+}
+.device-duo-top {
+  position: absolute;
+  top: 0;
+  width: 100%;
+  padding: 24px 24px 5px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: #fff;
+  pointer-events: auto;
+}
+.device-duo-leading,
+.device-duo-trailing {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 10px;
+}
+.device-duo-top .device-browser-address {
+  height: 44px;
+  max-width: 370px;
+  border-radius: 100px;
+  font-size: 17px;
+  font-weight: 500;
+  background: #f2f2f28c;
+  box-shadow: 0 0 0 0.5px #d2d2d2;
+}

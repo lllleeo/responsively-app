@@ -32,7 +32,7 @@ const IndividualLayoutToolbar = ({individualDevice, setIndividualDevice, devices
   }, [individualDevice, devices]);
 
   return (
-    <div className="my-4 mr-4 ml-12 flex justify-between">
+    <div className="my-4 mr-4 ml-12 flex shrink-0 justify-between">
       <Tabs
         onSelect={onTabClick}
         selectedIndex={activeTab}

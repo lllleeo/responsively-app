@@ -167,6 +167,90 @@ test.describe('Canvas mode', () => {
     expect(timings.p95).toBeLessThan(100);
   });
 
+  test('move mode drags the whole device without interacting with or reloading its page', async ({
+    app,
+  }) => {
+    await app.dismissModals();
+    await app.page.locator('[data-testid="layout-CANVAS"]').click();
+    await app.page.locator('button[title="Auto-arrange"]').click();
+    await app.page.locator('button[title="Reset view"]').click();
+    const ids = await guestIds(app);
+    const first = app.page.locator('[data-canvas-item]').first();
+    const position = () =>
+      first.evaluate((el) => ({
+        x: parseFloat((el as HTMLElement).style.left),
+        y: parseFloat((el as HTMLElement).style.top),
+      }));
+    const before = await position();
+    const others = await app.page
+      .locator('[data-canvas-item]')
+      .evaluateAll((items) => items.slice(1).map((el) => (el as HTMLElement).style.cssText));
+    await runInGuests(
+      app,
+      `window.__moveClicks = 0; document.addEventListener('click', () => window.__moveClicks++);`
+    );
+    const move = app.page.getByTestId('canvas-move-devices');
+    await move.click();
+    await expect(move).toHaveAttribute('aria-pressed', 'true');
+    const cover = first.getByTestId('device-move-cover');
+    const box = (await cover.boundingBox())!;
+    const frameBox = (await first.locator('[data-bezel]').boundingBox())!;
+    expect(box.x + box.width).toBeGreaterThanOrEqual(frameBox.x + frameBox.width - 0.5);
+    expect(box.y + box.height).toBeGreaterThanOrEqual(frameBox.y + frameBox.height - 0.5);
+    const start = {x: box.x + 100, y: box.y + 180};
+    await app.page.mouse.click(start.x, start.y);
+    await app.page.mouse.move(start.x, start.y);
+    await app.page.mouse.down();
+    await app.page.mouse.move(start.x + 90, start.y + 45, {steps: 6});
+    await app.page.mouse.up();
+    expect(await position()).toEqual({x: before.x + 100, y: before.y + 50});
+    expect(
+      await app.page
+        .locator('[data-canvas-item]')
+        .evaluateAll((items) => items.slice(1).map((el) => (el as HTMLElement).style.cssText))
+    ).toEqual(others);
+    expect(await runInGuests(app, 'window.__moveClicks')).toEqual(ids.map(() => 0));
+    expect(await guestIds(app)).toEqual(ids);
+    const moved = await position();
+    const frontBox = (await cover.boundingBox())!;
+    const nextBox = (await app.page.getByTestId('device-move-cover').nth(1).boundingBox())!;
+    const overlapX = Math.max(frontBox.x, nextBox.x) + 1;
+    const overlapY = Math.max(frontBox.y, nextBox.y) + 100;
+    expect(overlapX).toBeLessThan(frontBox.x + frontBox.width);
+    expect(
+      await app.page.evaluate(
+        ({x, y}) =>
+          document
+            .elementFromPoint(x, y)
+            ?.closest('[data-canvas-item]')
+            ?.getAttribute('data-canvas-item'),
+        {x: overlapX, y: overlapY}
+      )
+    ).toBe(await first.getAttribute('data-canvas-item'));
+
+    // A cancelled gesture must not leave a temporary position or save it.
+    await app.page.mouse.move(start.x + 90, start.y + 45);
+    await app.page.mouse.down();
+    await app.page.mouse.move(start.x + 140, start.y + 95, {steps: 3});
+    await app.page.keyboard.press('Escape');
+    await app.page.mouse.up();
+    await expect(move).toHaveAttribute('aria-pressed', 'false');
+    await expect(cover).toHaveCount(0);
+    expect(await position()).toEqual(moved);
+
+    // Guest input works again as soon as move mode ends.
+    await app.page.mouse.click(start.x + 90, start.y + 45);
+    await expect.poll(async () => (await runInGuests(app, 'window.__moveClicks'))[0]).toBe(1);
+    await move.click();
+    await app.page.screenshot({path: 'e2e/test-results/canvas-move-devices.png'});
+    await app.page.locator('[data-testid="layout-COLUMN"]').click();
+    await app.page.locator('[data-testid="layout-CANVAS"]').click();
+    await expect(move).toHaveAttribute('aria-pressed', 'false');
+    expect(await position()).toEqual(moved);
+    expect(await guestIds(app)).toEqual(ids);
+    await app.page.locator('button[title="Auto-arrange"]').click();
+  });
+
   test('dragging a device by its label moves and persists its position', async ({app}) => {
     await app.dismissModals();
     await app.page.locator('[data-testid="layout-CANVAS"]').click();
@@ -510,6 +594,8 @@ test.describe('Canvas mode', () => {
       expect(await guestIds(app)).toEqual(ids);
       await rotateAll.click();
       await expect(image).toHaveCSS('transform', 'none');
+      // Browser chrome adds a top inset independently of the ruler gutter.
+      const browserTop = await webview.evaluate((el) => parseFloat(el.style.marginTop));
 
       const rulers = app.page.locator('[data-canvas-item="10008"] button[title="Show rulers"]');
       await rulers.focus();
@@ -517,7 +603,9 @@ test.describe('Canvas mode', () => {
       await expect(rulers).toHaveAttribute('aria-pressed', 'true');
       await expect(phone.locator('canvas')).toHaveCount(2);
       await expect(webview).toHaveCSS('margin-left', '30px');
-      await expect(webview).toHaveCSS('margin-top', '30px');
+      await expect
+        .poll(() => webview.evaluate((el) => parseFloat(getComputedStyle(el).marginTop)))
+        .toBeCloseTo(browserTop + 30, 2);
       // The notch stays above the page while guides sit above the artwork.
       await expect(image).toHaveCSS('z-index', '2');
       const guideLayer = phone

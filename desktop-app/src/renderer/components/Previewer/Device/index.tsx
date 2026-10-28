@@ -34,6 +34,7 @@ import Toolbar from './Toolbar';
 import useDeviceNavigation from './useDeviceNavigation';
 import useDevtoolsBridge from './useDevtoolsBridge';
 import useWebviewLifecycle from './useWebviewLifecycle';
+import useBrowserChrome from './useBrowserChrome';
 
 interface Props {
   device: IDevice;
@@ -77,6 +78,7 @@ const Device = ({isPrimary, device, setIndividualDevice}: Props) => {
 
   const {webviewReady} = useWebviewLifecycle(ref, {isMobileCapable: device.isMobileCapable});
   const navigation = useDeviceNavigation({ref, isPrimary, webviewReady, address});
+  const browserChrome = useBrowserChrome(ref, initialAddress.current);
   const {openDevTools, inspectElement} = useDevtoolsBridge({ref, webviewReady, zoomfactor});
 
   const isIndividualLayout = layout === PREVIEW_LAYOUTS.INDIVIDUAL;
@@ -228,6 +230,7 @@ const Device = ({isPrimary, device, setIndividualDevice}: Props) => {
       zoomfactor={zoomfactor}
       rulerActive={rulerActive}
       navigation={navigation}
+      browserChrome={browserChrome}
       screenshotInProgress={screenshotInProgress}
       coordinates={coordinates}
       darkMode={darkMode}

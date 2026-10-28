@@ -1,11 +1,10 @@
 import {test, expect} from '../fixtures/electron-app';
 
-// The Previewer dock container has 'flex h-full' plus 'flex-col' (bottom) or
-// 'flex-row' (right) and holds the DevtoolsResizer as a DIRECT child — scope
-// with :has(>) because the app shell is also '.flex.h-full.flex-col'; without
-// it, dock-position detection matches the shell and always reports "bottom".
-const BOTTOM_DOCK_SELECTOR = '.flex.h-full.flex-col:has(> [data-testid="devtools-resizer"])';
-const RIGHT_DOCK_SELECTOR = '.flex.h-full.flex-row:has(> [data-testid="devtools-resizer"])';
+// Scope to the preview dock, then verify its actual layout direction.
+const BOTTOM_DOCK_SELECTOR =
+  '[data-testid="preview-dock-layout"].flex-col:has(> [data-testid="devtools-resizer"])';
+const RIGHT_DOCK_SELECTOR =
+  '[data-testid="preview-dock-layout"].flex-row:has(> [data-testid="devtools-resizer"])';
 
 test.describe('Inspect Elements', () => {
   test.describe.configure({mode: 'parallel'});

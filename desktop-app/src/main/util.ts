@@ -2,7 +2,7 @@
 import {URL} from 'url';
 import path from 'path';
 import {app} from 'electron';
-import fs from 'fs-extra';
+import fs from 'node:fs';
 import os from 'os';
 
 export function resolveHtmlPath(htmlFileName: string) {

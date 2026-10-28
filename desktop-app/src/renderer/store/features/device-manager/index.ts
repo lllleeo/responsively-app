@@ -13,6 +13,8 @@ export interface PreviewSuite {
   devices: string[];
   /** Canvas-mode frame positions in world coordinates, keyed by device id. */
   canvasPositions?: Record<string, CanvasPosition>;
+  /** Grid visual order; separate from mounting order to keep webviews alive. */
+  gridOrder?: string[];
 }
 
 export type PreviewSuites = PreviewSuite[];
@@ -107,6 +109,17 @@ export const deviceManagerSlice = createSlice({
         delete target.canvasPositions;
       }
     },
+    setGridOrder(state, action: PayloadAction<{suite: string; devices: string[] | null}>) {
+      const target = state.suites.find((suite) => suite.id === action.payload.suite);
+      if (!target) return;
+      if (action.payload.devices === null) {
+        delete target.gridOrder;
+      } else {
+        target.gridOrder = [...new Set([...action.payload.devices, ...target.devices])].filter(
+          (id) => target.devices.includes(id)
+        );
+      }
+    },
     setIndividualRotation(state, action: PayloadAction<{id: string; rotated: boolean}>) {
       const {id, rotated} = action.payload;
       if (rotated) {
@@ -129,6 +142,7 @@ export const {
   deleteAllSuites,
   setCanvasPosition,
   resetCanvasPositions,
+  setGridOrder,
   setIndividualRotation,
 } = deviceManagerSlice.actions;
 
