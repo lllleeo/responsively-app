@@ -12,6 +12,21 @@ export interface Device {
   isCustom?: boolean;
 }
 
+// The two layouts in Mobile simulator 4.22.2's iPhone Duo preset.
+export const getIPhoneDuoVariant = (device: Device): 'folded' | 'unfolded' | undefined => {
+  if (device.isCustom) return undefined;
+  if (device.id === '10034') return 'folded';
+  if (device.id === '10035') return 'unfolded';
+  return undefined;
+};
+
+export const getIPhone18Variant = (device: Device): 'pro' | 'pro-max' | undefined => {
+  if (device.isCustom) return undefined;
+  if (device.id === '10036') return 'pro';
+  if (device.id === '10037') return 'pro-max';
+  return undefined;
+};
+
 /*
 Ids range:
   10000 - 19999: Apple devices
@@ -453,6 +468,60 @@ export const defaultDevices: Device[] = [
     type: 'notebook',
     isTouchCapable: false,
     isMobileCapable: false,
+  },
+  {
+    id: '10034',
+    name: 'iPhone Duo (Folded)',
+    width: 466,
+    height: 678,
+    dpr: 3,
+    capabilities: ['touch', 'mobile'],
+    userAgent:
+      'Mozilla/5.0 (iPhone; CPU iPhone OS 27_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/27.0 Mobile/15E148 Safari/604.1',
+    type: 'phone',
+    isTouchCapable: true,
+    isMobileCapable: true,
+  },
+  {
+    id: '10035',
+    name: 'iPhone Duo (Unfolded)',
+    width: 890,
+    height: 626,
+    dpr: 3,
+    capabilities: ['touch', 'mobile'],
+    // The extension uses a desktop Safari UA on the unfolded screen.
+    userAgent:
+      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/27.0 Safari/605.1.15',
+    type: 'phone',
+    isTouchCapable: true,
+    isMobileCapable: true,
+  },
+  // iPhone 18 presets from Mobile simulator 4.22.2.
+  {
+    id: '10036',
+    name: 'iPhone 18 Pro',
+    width: 402,
+    height: 873,
+    dpr: 3,
+    capabilities: ['touch', 'mobile'],
+    userAgent:
+      'Mozilla/5.0 (iPhone; CPU iPhone OS 26_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Mobile/15E148 Safari/604.1',
+    type: 'phone',
+    isTouchCapable: true,
+    isMobileCapable: true,
+  },
+  {
+    id: '10037',
+    name: 'iPhone 18 Pro Max',
+    width: 440,
+    height: 956,
+    dpr: 3,
+    capabilities: ['touch', 'mobile'],
+    userAgent:
+      'Mozilla/5.0 (iPhone; CPU iPhone OS 26_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Mobile/15E148 Safari/604.1',
+    type: 'phone',
+    isTouchCapable: true,
+    isMobileCapable: true,
   },
   {
     id: '20001',

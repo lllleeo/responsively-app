@@ -10,6 +10,7 @@ import reducer, {
   setActiveSuite,
   setIndividualRotation,
   setSuiteDevices,
+  setGridOrder,
   DEFAULT_SUITE,
   DeviceManagerState,
   PreviewSuite,
@@ -131,5 +132,25 @@ describe('device-manager slice', () => {
     );
     state = reducer(state, resetCanvasPositions('default'));
     expect(state.suites[0].canvasPositions).toBeUndefined();
+  });
+
+  it('normalizes grid order without changing device membership, canvas positions or other suites', () => {
+    const original = stateWith({
+      suites: [{...DEFAULT_SUITE, canvasPositions: {'10008': {x: 120, y: 40}}}, MOBILE],
+    });
+    const state = reducer(
+      original,
+      setGridOrder({
+        suite: 'default',
+        devices: ['10013', 'missing', '10013'],
+      })
+    );
+    expect(state.suites[0].gridOrder).toEqual(['10013', '10008', '10015']);
+    expect(state.suites[0].devices).toEqual(original.suites[0].devices);
+    expect(state.suites[0].canvasPositions).toEqual(original.suites[0].canvasPositions);
+    expect(state.suites[1]).toEqual(MOBILE);
+    expect(reducer(state, setGridOrder({suite: 'default', devices: null})).suites[0]).toEqual(
+      original.suites[0]
+    );
   });
 });

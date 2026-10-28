@@ -5,7 +5,7 @@ import webpack from 'webpack';
 import HtmlWebpackPlugin from 'html-webpack-plugin';
 import pc from 'picocolors';
 import {merge} from 'webpack-merge';
-import {execSync, spawn} from 'child_process';
+import {execFileSync, spawn} from 'child_process';
 import ReactRefreshWebpackPlugin from '@pmmmwh/react-refresh-webpack-plugin';
 import baseConfig from './webpack.config.base';
 import webpackPaths from './webpack.paths';
@@ -31,12 +31,12 @@ if (!skipDLLs && !(fs.existsSync(webpackPaths.dllPath) && fs.existsSync(manifest
     pc.black(
       pc.bgYellow(
         pc.bold(
-          'The DLL files are missing. Sit back while we build them for you with "npm run build-dll"'
+          'The DLL files are missing. Sit back while we build them for you with "node --run postinstall"'
         )
       )
     )
   );
-  execSync('npm run postinstall');
+  execFileSync(process.execPath, ['--run', 'postinstall'], {stdio: 'inherit'});
 }
 
 const configuration: webpack.Configuration = {
@@ -199,31 +199,29 @@ const configuration: webpack.Configuration = {
       verbose: true,
     },
     setupMiddlewares(middlewares) {
+      // Node's script runner works across platforms without a shell wrapper
+      // or nesting a different package manager inside the user's command.
+      const runScript = (script: string, args: string[] = []) =>
+        spawn(process.execPath, ['--run', script, ...args], {
+          stdio: 'inherit',
+        });
+
       console.log('Starting preload.js builder...');
-      const preloadProcess = spawn('npm', ['run', 'start:preload'], {
-        shell: true,
-        stdio: 'inherit',
-      })
+      const preloadProcess = runScript('start:preload')
         .on('close', (code: number) => process.exit(code!))
         .on('error', (spawnError) => console.error(spawnError));
 
       console.log('Starting preload-webview.js builder...');
-      const preloadWebviewProcess = spawn('npm', ['run', 'start:preloadWebview'], {
-        shell: true,
-        stdio: 'inherit',
-      })
+      const preloadWebviewProcess = runScript('start:preloadWebview')
         .on('close', (code: number) => process.exit(code!))
         .on('error', (spawnError) => console.error(spawnError));
 
       console.log('Starting Main Process...');
-      let args = ['run', 'start:main'];
-      if (process.env.MAIN_ARGS) {
-        args = args.concat(['--', ...process.env.MAIN_ARGS.matchAll(/"[^"]+"|[^\s"]+/g)].flat());
-      }
-      spawn('npm', args, {
-        shell: true,
-        stdio: 'inherit',
-      })
+      const args = Array.from(
+        (process.env.MAIN_ARGS || '').matchAll(/"([^"]*)"|([^\s"]+)/g),
+        ([, quoted, unquoted]) => quoted ?? unquoted
+      );
+      runScript('start:main', args.length > 0 ? ['--', ...args] : [])
         .on('close', (code: number) => {
           preloadProcess.kill();
           preloadWebviewProcess.kill();

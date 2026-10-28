@@ -24,21 +24,21 @@
   "license": "MIT",
   "main": "./src/main/main.ts",
   "scripts": {
-    "build": "concurrently \"yarn run build:main\" \"yarn run build:renderer\" \"yarn run build:mcp\"",
-    "build:main": "cross-env NODE_ENV=production TS_NODE_TRANSPILE_ONLY=true webpack --config ./.erb/configs/webpack.config.main.prod.ts",
-    "build:renderer": "cross-env NODE_ENV=production TS_NODE_TRANSPILE_ONLY=true webpack --config ./.erb/configs/webpack.config.renderer.prod.ts",
-    "build:mcp": "cross-env NODE_ENV=production TS_NODE_TRANSPILE_ONLY=true webpack --config ./.erb/configs/webpack.config.mcp-cli.ts && tsx ./.erb/scripts/generate-mcp-manifest.ts",
-    "postinstall": "yarn rimraf --glob node_modules/browser-sync/dist/**/*.map && tsx .erb/scripts/check-native-dep.js && tsx postinstall.ts && electron-builder install-app-deps && cross-env NODE_ENV=development TS_NODE_TRANSPILE_ONLY=true webpack --config ./.erb/configs/webpack.config.renderer.dev.dll.ts && node node_modules/electron/install.js",
+    "build": "concurrently \"node --run build:main\" \"node --run build:renderer\" \"node --run build:mcp\"",
+    "build:main": "cross-env NODE_ENV=production node --import tsx ./node_modules/webpack/bin/webpack.js --config ./.erb/configs/webpack.config.main.prod.ts",
+    "build:renderer": "cross-env NODE_ENV=production node --import tsx ./node_modules/webpack/bin/webpack.js --config ./.erb/configs/webpack.config.renderer.prod.ts",
+    "build:mcp": "cross-env NODE_ENV=production node --import tsx ./node_modules/webpack/bin/webpack.js --config ./.erb/configs/webpack.config.mcp-cli.ts && tsx ./.erb/scripts/generate-mcp-manifest.ts",
+    "postinstall": "rimraf --glob node_modules/browser-sync/dist/**/*.map && tsx .erb/scripts/check-native-dep.js && tsx postinstall.ts && electron-builder install-app-deps && cross-env NODE_ENV=development node --import tsx ./node_modules/webpack/bin/webpack.js --config ./.erb/configs/webpack.config.renderer.dev.dll.ts && node node_modules/electron/install.js",
     "lint": "eslint . --max-warnings 0",
-    "package": "tsx ./.erb/scripts/clean.js dist && yarn run build && electron-builder build --publish never",
+    "package": "tsx ./.erb/scripts/clean.js dist && node --run build && electron-builder build --publish never",
     "prepare": "lefthook install",
     "rebuild": "electron-rebuild --parallel --types prod,dev,optional --module-dir release/app",
-    "dev": "yarn start",
-    "start": "tsx ./.erb/scripts/check-port-in-use.js && yarn run start:renderer",
+    "dev": "node --run start",
+    "start": "tsx ./.erb/scripts/check-port-in-use.js && node --run start:renderer",
     "start:main": "cross-env NODE_ENV=development electronmon ./src/main/dev-entry.cjs --enable-logging=stderr --log-level=3",
-    "start:preload": "cross-env NODE_ENV=development TS_NODE_TRANSPILE_ONLY=true webpack --config ./.erb/configs/webpack.config.preload.dev.ts",
-    "start:preloadWebview": "cross-env NODE_ENV=development TS_NODE_TRANSPILE_ONLY=true webpack --config ./.erb/configs/webpack.config.preload-webview.dev.ts",
-    "start:renderer": "cross-env NODE_ENV=development TS_NODE_TRANSPILE_ONLY=true webpack serve --config ./.erb/configs/webpack.config.renderer.dev.ts",
+    "start:preload": "cross-env NODE_ENV=development node --import tsx ./node_modules/webpack/bin/webpack.js --config ./.erb/configs/webpack.config.preload.dev.ts",
+    "start:preloadWebview": "cross-env NODE_ENV=development node --import tsx ./node_modules/webpack/bin/webpack.js --config ./.erb/configs/webpack.config.preload-webview.dev.ts",
+    "start:renderer": "cross-env NODE_ENV=development node --import tsx ./node_modules/webpack/bin/webpack.js serve --config ./.erb/configs/webpack.config.renderer.dev.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
@@ -83,6 +83,7 @@
   "devDependencies": {
     "@electron/notarize": "^3.1.1",
     "@electron/rebuild": "^4.2.0",
+    "@eslint/js": "9.39.5",
     "@playwright/test": "^1.63.0",
     "@pmmmwh/react-refresh-webpack-plugin": "^0.6.3",
     "@svgr/webpack": "^8.1.0",
@@ -166,8 +167,7 @@
       "target": {
         "target": "default",
         "arch": [
-          "arm64",
-          "x64"
+          "arm64"
         ]
       },
       "type": "distribution",

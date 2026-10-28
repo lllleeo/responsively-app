@@ -6,6 +6,7 @@ import {
   selectActiveSuite,
   selectIndividualRotations,
   setCanvasPosition,
+  setGridOrder,
 } from 'renderer/store/features/device-manager';
 import {selectIsPresenting, setPresenting} from 'renderer/store/features/ui';
 import {DOCK_POSITION, PREVIEW_LAYOUTS} from 'common/constants';
@@ -31,6 +32,7 @@ import {framedSize} from './Device/frames';
 import {PREVIEW_PINCH_EVENT, type PinchDetail} from './pinch';
 import DevtoolsResizer from './DevtoolsResizer';
 import IndividualLayoutToolbar from './IndividualLayoutToolBar';
+import useGridReorder from './useGridReorder';
 
 interface CanvasPosition {
   x: number;
@@ -101,12 +103,14 @@ const Previewer = () => {
   const individualRotations = useSelector(selectIndividualRotations);
   const presenting = isPresenting && layout === PREVIEW_LAYOUTS.CANVAS;
   const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(null);
+  const [movingDevices, setMovingDevices] = useState(false);
   const [exitPillHidden, setExitPillHidden] = useState<boolean>(false);
   const exitPillRef = useRef<HTMLButtonElement>(null);
   const [individualDevice, setIndividualDevice] = useState<IDevice>(devices[0]);
   const isIndividualLayout = layout === PREVIEW_LAYOUTS.INDIVIDUAL;
   const isMasonryLayout = layout === PREVIEW_LAYOUTS.MASONRY;
   const isCanvasLayout = layout === PREVIEW_LAYOUTS.CANVAS;
+  const isGridLayout = layout === PREVIEW_LAYOUTS.FLEX;
   // The remembered individual device may have left the suite; fall back to
   // the first device instead of hiding every preview.
   const individualDeviceId = devices.some((d) => d.id === individualDevice?.id)
@@ -126,10 +130,36 @@ const Previewer = () => {
     deviceId: string | null;
   } | null>(null);
   const stageRef = useRef<HTMLDivElement>(null);
+  const gridScrollerRef = useRef<HTMLDivElement>(null);
+  const grid = useGridReorder(isGridLayout, activeSuite, stageRef, gridScrollerRef);
   // Live position of the frame being dragged; committed to the store on drop.
   const [dragOverride, setDragOverride] = useState<{id: string; position: CanvasPosition} | null>(
     null
   );
+  const cancelDrag = () => {
+    const drag = dragState.current;
+    dragState.current = null;
+    setDragOverride(null);
+    if (drag && stageRef.current?.hasPointerCapture(drag.pointerId)) {
+      stageRef.current.releasePointerCapture(drag.pointerId);
+    }
+  };
+
+  useEffect(() => {
+    cancelDrag();
+    setMovingDevices(false);
+  }, [layout, activeSuite.id, presenting]);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        cancelDrag();
+        setMovingDevices(false);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
 
   // Pinch zoom (trackpad pinch = ctrl+wheel). Canvas zooms smoothly toward
   // the focal point; the other layouts step through zoomSteps once enough
@@ -276,6 +306,10 @@ const Previewer = () => {
       return undefined;
     }
     const onWheel = (e: WheelEvent) => {
+      if (dragState.current !== null) {
+        e.preventDefault();
+        return;
+      }
       if (e.ctrlKey) {
         e.preventDefault();
         applyPinchRef.current(e.deltaY, e.clientX, e.clientY);
@@ -292,6 +326,9 @@ const Previewer = () => {
   }, [isCanvasLayout]);
 
   const onStagePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.button !== 0 || dragState.current !== null) {
+      return;
+    }
     const target = e.target as HTMLElement;
     // Portaled popover panels bubble through the React tree even though they
     // live under <body>: if the real DOM target isn't inside the stage, this
@@ -305,12 +342,13 @@ const Previewer = () => {
     }
     const item = target.closest('[data-canvas-item]');
     if (item !== null) {
-      // Drag a device frame by its label; anything else on the device
-      // (toolbar, webview) belongs to the device itself.
-      if (target.closest('[data-device-label]') === null) {
+      // The move-mode cover intercepts gestures before they reach the guest.
+      // Outside move mode, only the label and explicit grip move a device.
+      if (target.closest('[data-device-label], [data-device-drag-handle]') === null) {
         return;
       }
       const deviceId = item.getAttribute('data-canvas-item')!;
+      e.preventDefault();
       setSelectedDeviceId(deviceId);
       const idx = devices.findIndex((d) => d.id === deviceId);
       dragState.current = {
@@ -360,17 +398,19 @@ const Previewer = () => {
     if (drag === null || drag.pointerId !== e.pointerId) {
       return;
     }
-    if (drag.deviceId !== null && dragOverride !== null) {
+    if (drag.deviceId !== null && (e.clientX !== drag.startX || e.clientY !== drag.startY)) {
       dispatch(
         setCanvasPosition({
           suite: activeSuite.id,
           device: drag.deviceId,
-          position: dragOverride.position,
+          position: {
+            x: drag.base.x + (e.clientX - drag.startX) / canvasZoom,
+            y: drag.base.y + (e.clientY - drag.startY) / canvasZoom,
+          },
         })
       );
-      setDragOverride(null);
     }
-    dragState.current = null;
+    cancelDrag();
   };
 
   return (
@@ -395,16 +435,48 @@ const Previewer = () => {
             ref={stageRef}
             data-testid={isCanvasLayout ? 'canvas-stage' : undefined}
             className={cx(
-              'w-full grow',
+              'relative w-full grow',
               isCanvasLayout
                 ? 'canvas-dots relative cursor-grab touch-none overflow-hidden select-none active:cursor-grabbing'
                 : 'overflow-y-auto'
             )}
             style={{height: '100%'}}
-            onPointerDown={isCanvasLayout ? onStagePointerDown : undefined}
-            onPointerMove={isCanvasLayout ? onStagePointerMove : undefined}
-            onPointerUp={isCanvasLayout ? onStagePointerUp : undefined}
+            onPointerDown={
+              isCanvasLayout ? onStagePointerDown : isGridLayout ? grid.onPointerDown : undefined
+            }
+            onPointerMove={
+              isCanvasLayout ? onStagePointerMove : isGridLayout ? grid.onPointerMove : undefined
+            }
+            onPointerUp={
+              isCanvasLayout ? onStagePointerUp : isGridLayout ? grid.onPointerUp : undefined
+            }
+            onPointerCancel={isCanvasLayout ? cancelDrag : isGridLayout ? grid.cancel : undefined}
+            onLostPointerCapture={
+              isCanvasLayout ? cancelDrag : isGridLayout ? grid.cancel : undefined
+            }
           >
+            {isGridLayout ? (
+              <>
+                <div
+                  role="status"
+                  className="pointer-events-none absolute bottom-[14px] left-4 z-10 rounded-full bg-panel/90 px-3 py-1 font-mono text-[11px] text-muted"
+                >
+                  {grid.source
+                    ? 'drop at the marker to reorder · Esc to cancel'
+                    : 'drag device names or grips to reorder · order saved automatically'}
+                </div>
+                {activeSuite.gridOrder ? (
+                  <button
+                    type="button"
+                    title="Reset grid order"
+                    onClick={() => dispatch(setGridOrder({suite: activeSuite.id, devices: null}))}
+                    className="absolute right-4 bottom-[14px] z-10 rounded-full border border-line bg-panel px-3 py-1 text-[11.5px] text-muted hover:bg-hover hover:text-fg"
+                  >
+                    Reset order
+                  </button>
+                ) : null}
+              </>
+            ) : null}
             {presenting ? (
               <button
                 ref={exitPillRef}
@@ -426,12 +498,31 @@ const Previewer = () => {
             {isCanvasLayout && !presenting ? (
               <>
                 <div className="pointer-events-none absolute bottom-[14px] left-4 z-10 font-mono text-[11px] text-muted">
-                  canvas mode · drag to pan · drag labels to move devices · click a label to select
+                  {movingDevices
+                    ? 'drag devices to arrange · Esc to finish · positions saved automatically'
+                    : 'drag labels to move devices · drag background to pan'}
                 </div>
                 <div
                   data-canvas-controls
                   className="absolute right-4 bottom-[14px] z-10 flex items-center gap-[2px] rounded-full border border-line bg-panel p-1 shadow-elevated"
                 >
+                  <button
+                    type="button"
+                    data-testid="canvas-move-devices"
+                    aria-pressed={movingDevices}
+                    title="Move devices freely (Esc to finish)"
+                    onClick={() => setMovingDevices((moving) => !moving)}
+                    className={cx(
+                      'flex h-[26px] items-center gap-1 rounded-full px-[10px] text-[11.5px] transition-colors focus-visible:outline focus-visible:outline-accent',
+                      movingDevices
+                        ? 'bg-accent text-white'
+                        : 'text-muted hover:bg-hover hover:text-fg'
+                    )}
+                  >
+                    <Icon icon="ic:round-open-with" fontSize={14} />
+                    {movingDevices ? 'Done moving' : 'Move devices'}
+                  </button>
+                  <div className="mx-[3px] h-4 w-px bg-line" />
                   <Popover
                     triggerTitle="View options"
                     anchor="top end"
@@ -503,7 +594,10 @@ const Previewer = () => {
                 incompatible with React 19); INDIVIDUAL hides the others;
                 CANVAS turns this same element into the transformed world. */}
             <div
-              data-testid={isCanvasLayout ? 'canvas-world' : undefined}
+              ref={gridScrollerRef}
+              data-testid={
+                isCanvasLayout ? 'canvas-world' : isGridLayout ? 'grid-world' : undefined
+              }
               className={cx({
                 'w-full p-2': isMasonryLayout,
                 'flex h-full gap-4 overflow-auto p-4': !isMasonryLayout && !isCanvasLayout,
@@ -526,10 +620,15 @@ const Previewer = () => {
                 <div
                   key={device.id}
                   data-canvas-item={isCanvasLayout ? device.id : undefined}
+                  data-grid-item={isGridLayout ? device.id : undefined}
                   className={cx({
                     'w-fit break-inside-avoid p-4': isMasonryLayout,
+                    'relative h-fit **:data-device-label:cursor-grab **:data-device-label:touch-none **:data-device-label:pl-6 **:data-device-label:select-none **:data-device-label:active:cursor-grabbing':
+                      isGridLayout,
+                    'opacity-50': isGridLayout && grid.source === device.id,
                     hidden: isIndividualLayout && device.id !== individualDeviceId,
-                    'absolute w-max': isCanvasLayout,
+                    'absolute w-max **:data-device-label:cursor-grab **:data-device-label:active:cursor-grabbing':
+                      isCanvasLayout,
                     // Selection (canvas): accent label + screen ring, and the
                     // device pill stays visible without hover.
                     '**:data-device-label:text-accent **:data-scaled-frame:ring-1 **:data-scaled-frame:ring-accent **:data-[testid=device-pill]:pointer-events-auto **:data-[testid=device-pill]:opacity-100':
@@ -537,8 +636,14 @@ const Previewer = () => {
                   })}
                   style={
                     isCanvasLayout
-                      ? {left: positionFor(device, idx).x, top: positionFor(device, idx).y}
-                      : undefined
+                      ? {
+                          left: positionFor(device, idx).x,
+                          top: positionFor(device, idx).y,
+                          zIndex: device.id === selectedDeviceId ? 1 : 0,
+                        }
+                      : isGridLayout
+                        ? {order: grid.order.indexOf(device.id)}
+                        : undefined
                   }
                 >
                   <Device
@@ -546,6 +651,54 @@ const Previewer = () => {
                     isPrimary={isIndividualLayout ? device.id === individualDeviceId : idx === 0}
                     setIndividualDevice={setIndividualDevice}
                   />
+                  {isGridLayout ? (
+                    <button
+                      type="button"
+                      data-grid-drag-handle
+                      aria-label={`Reorder ${device.name}`}
+                      title={`Drag to reorder ${device.name}; use Left/Right arrow keys to move`}
+                      onKeyDown={(event) => {
+                        if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+                          event.preventDefault();
+                          grid.moveByKey(device.id, event.key === 'ArrowLeft' ? -1 : 1);
+                        }
+                      }}
+                      className="absolute top-0 left-0 flex h-5 w-5 cursor-grab touch-none items-center justify-center rounded text-muted hover:bg-hover hover:text-accent focus-visible:outline focus-visible:outline-accent active:cursor-grabbing"
+                    >
+                      <Icon icon="ic:round-drag-indicator" fontSize={18} />
+                    </button>
+                  ) : null}
+                  {isGridLayout && grid.source ? (
+                    <div className="absolute inset-0 z-50 cursor-grabbing" />
+                  ) : null}
+                  {isGridLayout && grid.target?.id === device.id ? (
+                    <div
+                      data-testid="grid-drop-indicator"
+                      data-placement={grid.target.before ? 'before' : 'after'}
+                      className={cx(
+                        'pointer-events-none absolute top-0 bottom-0 z-50 w-1 rounded-full bg-accent',
+                        grid.target.before ? '-left-2' : '-right-2'
+                      )}
+                    />
+                  ) : null}
+                  {isCanvasLayout && !presenting ? (
+                    <div
+                      data-device-drag-handle
+                      title={`Drag to move ${device.name}`}
+                      className="absolute top-0 -left-6 flex h-5 w-5 cursor-grab items-center justify-center rounded text-muted hover:bg-hover hover:text-accent active:cursor-grabbing"
+                    >
+                      <Icon icon="ic:round-drag-indicator" fontSize={18} />
+                    </div>
+                  ) : null}
+                  {isCanvasLayout && movingDevices && !presenting ? (
+                    <div
+                      data-device-drag-handle
+                      data-testid="device-move-cover"
+                      aria-label={`Move ${device.name}`}
+                      title={`Drag to move ${device.name}`}
+                      className="absolute inset-0 z-50 cursor-grab rounded-lg ring-1 ring-accent/40 hover:bg-accent/5 hover:ring-accent active:cursor-grabbing"
+                    />
+                  ) : null}
                 </div>
               ))}
             </div>

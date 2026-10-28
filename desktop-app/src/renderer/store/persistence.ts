@@ -19,6 +19,7 @@ import {
   setSuiteDevices,
   setCanvasPosition,
   resetCanvasPositions,
+  setGridOrder,
 } from './features/device-manager';
 import {setDockPosition} from './features/devtools';
 import {
@@ -144,7 +145,8 @@ startListening({
     deleteSuite,
     deleteAllSuites,
     setCanvasPosition,
-    resetCanvasPositions
+    resetCanvasPositions,
+    setGridOrder
   ),
   effect: (_action, api) => {
     window.electron.store.set('deviceManager.previewSuites', api.getState().deviceManager.suites);

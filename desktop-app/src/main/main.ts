@@ -243,7 +243,7 @@ let isBrowserSyncInitiated = false;
 
 const createWindow = async () => {
   windowShownOnOpen = false;
-  if (process.env.E2E_TEST !== 'true') {
+  if (isDebug && process.env.E2E_TEST !== 'true') {
     await installExtensions();
   }
 

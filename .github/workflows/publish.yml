@@ -23,8 +23,7 @@ jobs:
 
     strategy:
       matrix:
-        # macos-15 is Apple Silicon: mac arm64 builds natively, mac x64 and
-        # win/linux cross-build; macos-13 (Intel) is deprecated on GitHub.
+        # macos-15 builds mac arm64 natively; Windows/Linux cross-build.
         os: [macos-15]
 
     steps:
@@ -80,4 +79,5 @@ jobs:
           # draft so a human reviews before it reaches every updater.
           EP_PRE_RELEASE: ${{ github.event.inputs.channel != 'stable' && 'true' || '' }}
         run: |
-          yarn exec electron-builder -- --publish always --win --mac --linux --arm64 --x64
+          yarn exec electron-builder -- --publish always --mac --arm64
+          yarn exec electron-builder -- --publish always --win --linux --arm64 --x64

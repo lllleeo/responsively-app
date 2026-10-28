@@ -7,6 +7,7 @@ const availableCores =
 // Test files ordered by duration (slowest first) so long-running files
 // get scheduled onto workers early, minimizing total wall-clock time.
 const testOrder = [
+  'browser-chrome.spec.ts',
   'device-interaction-mirroring.spec.ts',
   'canvas-mode.spec.ts',
   'pinch-zoom.spec.ts',

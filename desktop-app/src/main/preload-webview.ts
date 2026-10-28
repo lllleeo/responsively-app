@@ -49,6 +49,46 @@ const requestFlush = () => {
 };
 
 const documentBodyInit = () => {
+  // Observe actual scrolling (also inside overflow containers), rather than
+  // wheel intent: a wheel at the end of a page must not hide browser controls.
+  // Capture catches non-bubbling element scroll events and mirrored scrolls.
+  const scrollPositions = new WeakMap<Element, {y: number; viewport: number}>();
+  let lastScrolledElement: Element | null = null;
+  window.addEventListener('resize', () => {
+    // Reset baselines after viewport changes, including scroll anchoring when
+    // controls expand at the bottom. The next real gesture still works.
+    for (const target of [document.scrollingElement, lastScrolledElement]) {
+      if (target) scrollPositions.set(target, {y: target.scrollTop, viewport: target.clientHeight});
+    }
+  });
+  let chromeScroll: {y: number; deltaY: number} | null = null;
+  let chromeFrame: number | null = null;
+  window.addEventListener(
+    'scroll',
+    (event) => {
+      const target = event.target === document ? document.scrollingElement : event.target;
+      if (!(target instanceof Element)) return;
+      lastScrolledElement = target;
+      const viewport = target.clientHeight;
+      const y = Math.max(0, Math.min(target.scrollTop, target.scrollHeight - viewport));
+      const previous = scrollPositions.get(target);
+      scrollPositions.set(target, {y, viewport});
+      // Expanding the viewport can clamp scrollTop near the document bottom.
+      // That layout adjustment is not an upward scroll gesture.
+      const deltaY = y - (previous?.y ?? 0);
+      if (previous && previous.viewport !== viewport) return;
+      if (deltaY === 0) return;
+      chromeScroll = {y, deltaY: (chromeScroll?.deltaY ?? 0) + deltaY};
+      if (chromeFrame !== null) return;
+      chromeFrame = window.requestAnimationFrame(() => {
+        ipcRenderer.sendToHost('browser-chrome-scroll', chromeScroll);
+        chromeScroll = null;
+        chromeFrame = null;
+      });
+    },
+    {capture: true, passive: true}
+  );
+
   // Browser Sync
   const bsPort = ipcRenderer.sendSync(IPC_MAIN_CHANNELS.GET_BROWSER_SYNC_PORT);
   const bsScript = window.document.createElement('script');
